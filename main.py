@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, Body, Depends
+from fastapi import FastAPI, Body, Depends, HTTPException, status
 
 from app.models import DataSchema, UserSchema, UserLoginSchema
 from app.auth.auth_bearer import JWTBearer
@@ -34,6 +34,18 @@ app = FastAPI()
 def check_user(data: UserLoginSchema):
     for user in users:
         if user.email == data.email and user.password == data.password:
+            return True
+    return False
+
+def check_email(data: UserLoginSchema):
+    for user in users:
+        if user.email == data.email:
+            return True
+    return False
+
+def check_username(data: UserLoginSchema):
+    for user in users:
+        if user.username == data.username:
             return True
     return False
 
@@ -76,6 +88,10 @@ def add_post(post: DataSchema):
 
 @app.post("/user/signup", dependencies=[Depends(JWTBearer())], tags=["user"])
 def create_user(user: UserSchema = Body(...)):
+    if(check_email(user)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="email already exists")
+    if(check_username(user)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
     users.append(user) # replace with db call, making sure to hash the password first
     return signJWT(user.email)
 
